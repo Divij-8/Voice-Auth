@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Guardian - Enhanced Authentication</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .lock-icon {
+            font-size: 60px;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .lock-icon.locked {
+            filter: grayscale(100%);
+        }
+
+        .lock-icon.unlocked {
+            animation: unlock 0.5s ease;
+        }
+
+        @keyframes unlock {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(-10deg); }
+            75% { transform: rotate(10deg); }
+        }
+
+        h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            color: #667eea;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        .status.locked {
+            background: #fee;
+            color: #c33;
+        }
+
+        .status.unlocked {
+            background: #efe;
+            color: #3c3;
+        }
+
+        .record-section {
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .record-btn {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 48px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .record-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.6);
+        }
+
+        .record-btn:active {
+            transform: scale(0.95);
+        }
+
+        .record-btn.recording {
+            background: #e74c3c;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .record-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .instruction {
+            margin-top: 15px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+        }
+
+        .result.show {
+            display: block;
+        }
+
+        .result.success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
+        .result.failure {
+            background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+            color: white;
+        }
+
+        .result h2 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .confidence {
+            font-size: 48px;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+
+        .message {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .metric {
+            text-align: center;
+        }
+
+        .metric-label {
+            font-size: 11px;
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .metric-value {
+            font-size: 20px;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        .loading {
+            text-align: center;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .error.show {
+            display: block;
+        }
+
+        .timer {
+            font-size: 24px;
+            color: #667eea;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        .system-status {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .enhancement-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-left: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .score-bars {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .score-bar {
+            margin-bottom: 10px;
+        }
+
+        .score-bar-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            margin-bottom: 5px;
+            opacity: 0.9;
+        }
+
+        .score-bar-track {
+            height: 8px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .score-bar-fill {
+            height: 100%;
+            background: white;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="lock-icon locked" id="lockIcon">🔒</div>
+            <h1>Voice Guardian</h1>
+            <div class="subtitle">
+                Enhanced with Cross-Encoder
+                <span class="enhancement-badge">AI Enhanced</span>
+            </div>
+            <div class="status locked" id="statusBadge">LOCKED</div>
+        </div>
+
+        <div class="system-status" id="systemStatus">
+            Checking system status...
+        </div>
+
+        <div class="record-section">
+            <button class="record-btn" id="recordBtn">🎤</button>
+            <div class="instruction" id="instruction">Click to record your voice</div>
+            <div class="timer" id="timer"></div>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Verifying with AI enhancement...</p>
+        </div>
+
+        <div class="result" id="result"></div>
+        <div class="error" id="error"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000';
+        
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+        let recordingTimer;
+        let recordingSeconds = 0;
+        let currentResult = null; // Track current result to prevent auto-hide
+        
+        const recordBtn = document.getElementById('recordBtn');
+        const instruction = document.getElementById('instruction');
+        const timer = document.getElementById('timer');
+        const loading = document.getElementById('loading');
+        const result = document.getElementById('result');
+        const error = document.getElementById('error');
+        const lockIcon = document.getElementById('lockIcon');
+        const statusBadge = document.getElementById('statusBadge');
+        const systemStatus = document.getElementById('systemStatus');
+        
+        // Check system status on load
+        async function checkSystemStatus() {
+            try {
+                const response = await fetch(`${API_URL}/api/status`);
+                const data = await response.json();
+                
+                if (data.enrolled) {
+                    const enhancement = data.enhancement || 'Standard';
+                    const threshold = data.stats?.threshold || 0.80;
+                    systemStatus.innerHTML = `
+                        ✅ System Ready - ${enhancement}<br>
+                        <small>Threshold: ${threshold.toFixed(2)} | Enrolled: ${data.stats?.enrollment_count || 0} samples</small>
+                    `;
+                    systemStatus.style.background = '#e8f5e9';
+                    systemStatus.style.color = '#2e7d32';
+                } else {
+                    systemStatus.innerHTML = '⚠️ System not enrolled - Please add training data and restart server';
+                    systemStatus.style.background = '#fff3e0';
+                    systemStatus.style.color = '#e65100';
+                    recordBtn.disabled = true;
+                }
+            } catch (err) {
+                systemStatus.innerHTML = '❌ Cannot connect to server - Please start the FastAPI backend';
+                systemStatus.style.background = '#ffebee';
+                systemStatus.style.color = '#c62828';
+                recordBtn.disabled = true;
+            }
+        }
+        checkSystemStatus();
+        
+        recordBtn.addEventListener('click', async () => {
+            if (!isRecording) {
+                startRecording();
+            } else {
+                stopRecording();
+            }
+        });
+        
+        async function startRecording() {
+            try {
+                hideMessages();
+                currentResult = null; // Clear previous result when starting new recording
+                
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                recordingSeconds = 0;
+                
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+                
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    await verifyVoice(audioBlob);
+                    
+                    // Stop all tracks
+                    stream.getTracks().forEach(track => track.stop());
+                };
+                
+                mediaRecorder.start();
+                isRecording = true;
+                
+                recordBtn.classList.add('recording');
+                recordBtn.textContent = '⏹️';
+                instruction.textContent = 'Recording... Click to stop';
+                
+                // Start timer
+                recordingTimer = setInterval(() => {
+                    recordingSeconds++;
+                    timer.textContent = `${recordingSeconds}s`;
+                }, 1000);
+            } catch (err) {
+                showError('Microphone access denied. Please allow microphone access.');
+                console.error('Error accessing microphone:', err);
+            }
+        }
+        
+        function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                isRecording = false;
+                
+                recordBtn.classList.remove('recording');
+                recordBtn.textContent = '🎤';
+                instruction.textContent = 'Processing...';
+                timer.textContent = '';
+                
+                clearInterval(recordingTimer);
+            }
+        }
+        
+        async function verifyVoice(audioBlob) {
+            loading.classList.add('show');
+            recordBtn.disabled = true;
+            const formData = new FormData();
+            formData.append('audio', audioBlob, 'recording.wav');
+            try {
+                const response = await fetch(`${API_URL}/api/verify`, {
+                    method: 'POST',
+                    body: formData
+                });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Verification failed');
+                }
+                const data = await response.json();
+                displayResult(data);
+            } catch (err) {
+                showError(`Error: ${err.message}`);
+                console.error('Verification error:', err);
+            } finally {
+                loading.classList.remove('show');
+                recordBtn.disabled = false;
+                instruction.textContent = 'Click to record your voice';
+            }
+        }
+        
+        function displayResult(data) {
+            result.classList.add('show');
+            currentResult = data; // Store result so it persists
+            
+            const hasEnhancement = data.cross_encoder_score !== undefined;
+            const improvement = data.improvement || 0;
+            
+            if (data.authenticated) {
+                result.classList.remove('failure');
+                result.classList.add('success');
+                
+                let metricsHTML = `
+                    <div class="metrics">
+                        <div class="metric">
+                            <div class="metric-label">Similarity</div>
+                            <div class="metric-value">${(data.similarity * 100).toFixed(1)}%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Threshold</div>
+                            <div class="metric-value">${(data.threshold * 100).toFixed(0)}%</div>
+                        </div>
+                `;
+                
+                if (hasEnhancement) {
+                    metricsHTML += `
+                        <div class="metric">
+                            <div class="metric-label">Cosine Score</div>
+                            <div class="metric-value">${(data.cosine_similarity * 100).toFixed(1)}%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">AI Score</div>
+                            <div class="metric-value">${(data.cross_encoder_score * 100).toFixed(1)}%</div>
+                        </div>
+                    `;
+                }
+                
+                metricsHTML += '</div>';
+                
+                let scoreBarsHTML = '';
+                if (hasEnhancement) {
+                    scoreBarsHTML = `
+                        <div class="score-bars">
+                            <div class="score-bar">
+                                <div class="score-bar-label">
+                                    <span>Cosine Similarity</span>
+                                    <span>${(data.cosine_similarity * 100).toFixed(1)}%</span>
+                                </div>
+                                <div class="score-bar-track">
+                                    <div class="score-bar-fill" style="width: ${data.cosine_similarity * 100}%"></div>
+                                </div>
+                            </div>
+                            <div class="score-bar">
+                                <div class="score-bar-label">
+                                    <span>Cross-Encoder Score</span>
+                                    <span>${(data.cross_encoder_score * 100).toFixed(1)}%</span>
+                                </div>
+                                <div class="score-bar-track">
+                                    <div class="score-bar-fill" style="width: ${data.cross_encoder_score * 100}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                result.innerHTML = `
+                    <h2>🎉 ACCESS GRANTED</h2>
+                    <div class="confidence">${data.confidence.toFixed(1)}%</div>
+                    <div class="message">
+                        Voice authenticated successfully!
+                        ${hasEnhancement ? `<br><small>AI Enhanced (+${improvement.toFixed(1)}% accuracy)</small>` : ''}
+                    </div>
+                    ${metricsHTML}
+                    ${scoreBarsHTML}
+                `;
+                
+                // Update lock status
+                lockIcon.textContent = '🔓';
+                lockIcon.classList.remove('locked');
+                lockIcon.classList.add('unlocked');
+                statusBadge.textContent = 'UNLOCKED';
+                statusBadge.classList.remove('locked');
+                statusBadge.classList.add('unlocked');
+                
+                // Result stays visible - no auto-hide. Only hides on new recording
+                
+            } else {
+                result.classList.remove('success');
+                result.classList.add('failure');
+                
+                let metricsHTML = `
+                    <div class="metrics">
+                        <div class="metric">
+                            <div class="metric-label">Similarity</div>
+                            <div class="metric-value">${(data.similarity * 100).toFixed(1)}%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Needed</div>
+                            <div class="metric-value">${(data.threshold * 100).toFixed(0)}%</div>
+                        </div>
+                `;
+                
+                if (hasEnhancement) {
+                    metricsHTML += `
+                        <div class="metric">
+                            <div class="metric-label">Cosine</div>
+                            <div class="metric-value">${(data.cosine_similarity * 100).toFixed(1)}%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">AI Score</div>
+                            <div class="metric-value">${(data.cross_encoder_score * 100).toFixed(1)}%</div>
+                        </div>
+                    `;
+                }
+                
+                metricsHTML += '</div>';
+                
+                result.innerHTML = `
+                    <h2>🚫 ACCESS DENIED</h2>
+                    <div class="confidence">${data.confidence.toFixed(1)}%</div>
+                    <div class="message">Voice not recognized</div>
+                    ${metricsHTML}
+                `;
+                
+                // Lock icon remains locked
+                lockIcon.textContent = '🔒';
+                lockIcon.classList.remove('unlocked');
+                lockIcon.classList.add('locked');
+                statusBadge.textContent = 'LOCKED';
+                statusBadge.classList.add('locked');
+                statusBadge.classList.remove('unlocked');
+                
+                // Result stays visible - no auto-hide. Only hides on new recording
+            }
+        }
+        
+        function showError(message) {
+            error.textContent = message;
+            error.classList.add('show');
+            
+            setTimeout(() => {
+                error.classList.remove('show');
+            }, 5000);
+        }
+        
+        function hideMessages() {
+            result.classList.remove('show');
+            error.classList.remove('show');
+        }
+    </script>
+</body>
+</html>
