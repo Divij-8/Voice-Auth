@@ -19,7 +19,7 @@ if not hasattr(torchaudio, 'list_audio_backends'):
 if not hasattr(torchaudio, 'get_audio_backend'):
     torchaudio.get_audio_backend = lambda: "soundfile"
 
-from speechbrain.inference import SpeakerRecognition
+from speechbrain.inference.speaker import SpeakerRecognition
 
 
 class VoiceGuardian:
