@@ -1,0 +1,7 @@
+streamlit
+torch>=2.0.0
+torchaudio>=2.0.0
+librosa
+soundfile
+speechbrain>=0.5.13,<1.0
+audio-recorder-streamlit
