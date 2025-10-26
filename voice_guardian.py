@@ -111,6 +111,11 @@ class VoiceGuardianEnhanced:
             savedir="pretrained_models/ecapa-tdnn"
         )
         
+        self.target_voiceprint = None
+        self.enrollment_count = 0
+        self.embeddings_history = []
+        self.all_enrollment_embeddings = []  # Store all for current enrollment
+        
         # Initialize cross-encoder network
         if self.use_cross_encoder:
             self.cross_encoder = CrossEncoderNetwork(embedding_dim=192, hidden_dim=256)
@@ -118,11 +123,6 @@ class VoiceGuardianEnhanced:
             self._initialize_cross_encoder()
         else:
             self.cross_encoder = None
-        
-        self.target_voiceprint = None
-        self.enrollment_count = 0
-        self.embeddings_history = []
-        self.all_enrollment_embeddings = []  # Store all for cross-encoder
 
     def _initialize_cross_encoder(self):
         """
@@ -396,11 +396,12 @@ class VoiceGuardianEnhanced:
         except Exception as e:
             raise RuntimeError(f"Failed to process verification audio: {str(e)}")
         
-        # Calculate cosine similarity (baseline)
-        cosine_sim = self._calculate_cosine_similarity(
-            self.target_voiceprint, 
-            new_embedding
-        )
+        # Calculate cosine similarities to all enrolled embeddings
+        cosine_scores = []
+        for enroll_emb in self.all_enrollment_embeddings:
+            cos_sim = self._calculate_cosine_similarity(enroll_emb, new_embedding)
+            cosine_scores.append(cos_sim)
+        max_cosine = max(cosine_scores) if cosine_scores else 0.0
         
         # Calculate cross-encoder score if enabled
         if self.use_cross_encoder:
@@ -411,21 +412,21 @@ class VoiceGuardianEnhanced:
             
             # Also compare with multiple enrollment embeddings for robustness
             ce_scores = []
-            for enroll_emb in self.all_enrollment_embeddings[:10]:  # Use top 10
+            for enroll_emb in self.all_enrollment_embeddings:  # Use all enrolled
                 score = self._calculate_cross_encoder_score(enroll_emb, new_embedding)
                 ce_scores.append(score)
             
             # Use max score from all comparisons
             max_ce_score = max(ce_scores) if ce_scores else cross_encoder_score
             
-            # Weighted combination: 40% cosine + 60% cross-encoder
+            # Weighted combination: 40% max cosine + 60% max cross-encoder
             # Cross-encoder gets more weight as it's trained on the data
-            final_similarity = 0.4 * cosine_sim + 0.6 * max_ce_score
+            final_similarity = 0.4 * max_cosine + 0.6 * max_ce_score
             
         else:
             cross_encoder_score = None
             max_ce_score = None
-            final_similarity = cosine_sim
+            final_similarity = max_cosine
         
         # Normalize to 0-1 range for confidence
         confidence = (final_similarity + 1) / 2 if final_similarity < 1.0 else final_similarity
@@ -437,7 +438,7 @@ class VoiceGuardianEnhanced:
             "status": "Authenticated" if is_authenticated else "Rejected",
             "confidence": confidence,
             "similarity": final_similarity,
-            "cosine_similarity": cosine_sim,
+            "cosine_similarity": max_cosine,
             "threshold": self.threshold,
             "decision": "Above" if is_authenticated else "Below"
         }
