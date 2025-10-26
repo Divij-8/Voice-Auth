@@ -304,7 +304,19 @@ else:
                 if st.button("🔐 Verify Speaker", use_container_width=True, type="primary"):
                     with st.spinner("Verifying... Extracting embeddings and comparing..."):
                         try:
-                            result = guardian.verify_speaker(temp_wav_path, return_details=True)
+                            # Load audio for RMS check
+                            audio_signal, sr_check = sf.read(io.BytesIO(audio_data))
+                            rms = np.sqrt(np.mean(audio_signal**2))
+                            if rms < 0.005:
+                                result = {
+                                    "status": "Rejected",
+                                    "confidence": 0.0,
+                                    "similarity": 0.0,
+                                    "threshold": guardian.threshold,
+                                    "decision": "No speech detected"
+                                }
+                            else:
+                                result = guardian.verify_speaker(temp_wav_path, return_details=True)
                             
                             # Save verification recording
                             saved_filepath = audio_storage.save_verification_recording(
